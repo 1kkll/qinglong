@@ -81,7 +81,7 @@ check_server() {
     disk_use=$(df -P | grep /dev | grep -v -E '(tmp|boot|shm)' | awk '{print $5}' | cut -f 1 -d "%" | head -n 1)
     if [[ $cpu_use -gt $cpu_warn ]] && [[ $cpu_warn ]] || [[ $mem_free -lt $mem_warn ]] || [[ $disk_use -gt $disk_warn ]]; then
       local resource=$(echo "$top_result" | grep -v -E 'grep|Mem|idle|Load|tr' | awk '{$2="";$3="";$4="";$5="";$7="";print $0}' | head -n 10 | tr '\n' '|' | sed s/\|/\\\\n/g)
-      notify_api "服务器资源异常警告" "当前CPU占用 $cpu_use% 内存占用 $mem_use% 磁盘占用 $disk_use% \n资源占用详情 \n\n $resource"
+      notify "服务器资源异常警告" "当前CPU占用 $cpu_use% 内存占用 $mem_use% 磁盘占用 $disk_use% \n资源占用详情 \n\n $resource"
     fi
   fi
 }

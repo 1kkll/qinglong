@@ -52,10 +52,12 @@ list_own_drop=$dir_list_tmp/own_drop.list
 link_name=(
   task
   ql
+  notify
 )
 original_name=(
   task.sh
   update.sh
+  notify.sh
 )
 
 init_env() {

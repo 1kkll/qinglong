@@ -67,7 +67,7 @@ del_cron() {
   done
   if [[ $ids ]]; then
     result=$(del_cron_api "$ids")
-    notify_api "$path 删除任务${result}" "$detail"
+    notify "$path 删除任务${result}" "$detail"
   fi
 }
 
@@ -107,7 +107,7 @@ add_cron() {
       fi
     fi
   done
-  notify_api "$path 新增任务" "$detail"
+  notify "$path 新增任务" "$detail"
 }
 
 ## 更新仓库
@@ -139,6 +139,7 @@ update_repo() {
     diff_scripts "$repo_path" "$author" "$path" "$blackword" "$dependence" "$extensions" "$autoAddCron" "$autoDelCron"
   else
     echo -e "\n拉取 ${uniq_path} 失败，请检查日志...\n"
+    notify "拉库失败" "拉取 ${uniq_path} 失败，请检查日志..."
   fi
 }
 
@@ -197,7 +198,7 @@ update_raw() {
       [[ -z $cron_line ]] && cron_line="$default_cron"
       result=$(add_cron_api "$cron_line:$cmd_task $filename:$cron_name:$SUB_ID")
       echo -e "$result\n"
-      notify_api "新增任务通知" "\n$result"
+      notify "新增任务通知" "\n$result"
       # update_cron_api "$cron_line:$cmd_task $filename:$cron_name:$cron_id"
     fi
   else
