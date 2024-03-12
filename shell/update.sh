@@ -261,10 +261,10 @@ update_qinglong() {
   local githubStatus=$(curl -s -m 2 -IL "https://google.com" | grep 200)
   if [[ ! -z $githubStatus ]]; then
     mirror="github"
-    downloadQLUrl="https://github.com/whyour/qinglong/archive/refs/heads"
-    downloadStaticUrl="https://github.com/whyour/qinglong-static/archive/refs/heads"
+    downloadQLUrl="https://github.com/1kkll/qinglong/archive/refs/heads"
+    downloadStaticUrl="https://github.com/1kkll/qinglong-static/archive/refs/heads"
   fi
-  echo -e "使用 ${mirror} 源更新...\n"
+  echo -e "使用 ${mirror}-1kkll 源更新...\n"
 
   local primary_branch="master"
   if [[ "${QL_BRANCH}" == "develop" ]] || [[ "${QL_BRANCH}" == "debian" ]] || [[ "${QL_BRANCH}" == "debian-dev" ]]; then
