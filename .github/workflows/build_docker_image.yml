@@ -1,41 +1,9 @@
 name: Build And Push Docker Image
 
 on:
-  push:
-    paths-ignore:
-      - "*.md"
-    branches:
-      - "master"
-      - "develop"
-    tags:
-      - "v*"
-  schedule:
-    - cron: "00 20 * * *"
   workflow_dispatch:
 
 jobs:
-  to_gitlab:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: pixta-dev/repository-mirroring-action@v1
-        with:
-          target_repo_url: git@gitlab.com:whyour/qinglong.git
-          ssh_private_key: ${{ secrets.GITLAB_SSH_PK }}
-
-  to_gitee:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: pixta-dev/repository-mirroring-action@v1
-        with:
-          target_repo_url: git@gitee.com:whyour/qinglong.git
-          ssh_private_key: ${{ secrets.GITLAB_SSH_PK }}
-
   build-static:
     runs-on: ubuntu-latest
     steps:
@@ -58,9 +26,6 @@ jobs:
         env:
           GITHUB_REPO: github.com/${{ github.repository_owner }}/qinglong-static
           GITHUB_BRANCH: ${{ github.ref_name }}
-          REPO_GITEE: git@gitee.com:whyour/qinglong-static.git
-          REPO_GITLAB: git@gitlab.com:whyour/qinglong-static.git
-          PRIVATE_KEY: ${{ secrets.GITLAB_SSH_PK }}
         run: |
           mkdir -p tmp
           cd ./tmp
@@ -70,17 +35,6 @@ jobs:
           git config --local user.email 'github-actions[bot]@users.noreply.github.com'
           git commit --allow-empty -m "copy static at $(date +'%Y-%m-%d %H:%M:%S')"
           git push --force --quiet "https://${{ secrets.API_TOKEN }}@${GITHUB_REPO}.git" ${GITHUB_BRANCH}:${GITHUB_BRANCH}
-
-          mkdir -p ~/.ssh
-          echo "${PRIVATE_KEY}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-
-          export GIT_SSH_COMMAND="ssh -v -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -l git"
-          git remote add gitee "${REPO_GITEE}"
-          git remote add gitlab "${REPO_GITLAB}"
-          git gc
-          git push --force --quiet gitee ${GITHUB_BRANCH}:${GITHUB_BRANCH}
-          git push --force --quiet gitlab ${GITHUB_BRANCH}:${GITHUB_BRANCH}
 
   build:
     needs: build-static
@@ -125,7 +79,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            ${{ github.repository }}
+            1kkkk/qinglong
             ghcr.io/${{ github.repository }}
           # generate Docker tags based on the following events/attributes
           #   nightly, master, pr-2, 1.2.3, 1.2, 1
@@ -163,13 +117,13 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=registry,ref=whyour/qinglong:cache
-          cache-to: type=registry,ref=whyour/qinglong:cache,mode=max
+          cache-from: type=registry,ref=1kkkk/qinglong:cache
+          cache-to: type=registry,ref=1kkkk/qinglong:cache,mode=max
 
       - name: Image digest
         run: |
           echo ${{ steps.docker_build.outputs.digest }}
-  
+
   build310:
     if: ${{ github.ref_name == 'master' }}
     needs: build-static
@@ -226,9 +180,9 @@ jobs:
           context: .
           file: ./docker/310.Dockerfile
           push: true
-          tags: whyour/qinglong:python3.10
-          cache-from: type=registry,ref=whyour/qinglong:cache-python3.10
-          cache-to: type=registry,ref=whyour/qinglong:cache-python3.10,mode=max
+          tags: 1kkkk/qinglong:python3.10
+          cache-from: type=registry,ref=1kkkk/qinglong:cache-python3.10
+          cache-to: type=registry,ref=1kkkk/qinglong:cache-python3.10,mode=max
 
       - name: Image digest
         run: |
