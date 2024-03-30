@@ -1,10 +1,11 @@
-import intl from 'react-intl-universal';
-import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { Statistic, Modal, Tag, Button, Spin, message } from 'antd';
-import { request } from '@/utils/http';
+import { disableBody } from '@/utils';
 import config from '@/utils/config';
+import { request } from '@/utils/http';
 import WebSocketManager from '@/utils/websocket';
 import Ansi from 'ansi-to-react';
+import { Button, Modal, Statistic, message } from 'antd';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import intl from 'react-intl-universal';
 
 const { Countdown } = Statistic;
 
@@ -116,7 +117,7 @@ const CheckUpdate = ({ systemInfo }: any) => {
 
   const reloadSystem = (type?: string) => {
     request
-      .put(`${config.apiPrefix}system/reload`, { type })
+      .put(`${config.apiPrefix}update/${type}`)
       .then((_data: any) => {
         message.success({
           content: (
@@ -132,6 +133,7 @@ const CheckUpdate = ({ systemInfo }: any) => {
           ),
           duration: 30,
         });
+        disableBody();
         setTimeout(() => {
           window.location.reload();
         }, 30000);
@@ -220,7 +222,7 @@ const CheckUpdate = ({ systemInfo }: any) => {
       </Button>
       <Button
         type="primary"
-        onClick={() => reloadSystem()}
+        onClick={() => reloadSystem('reload')}
         style={{ marginLeft: 8 }}
       >
         {intl.get('重新启动')}

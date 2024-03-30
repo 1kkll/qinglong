@@ -34,7 +34,6 @@ output_list_add_drop() {
   if [[ -s $list ]]; then
     echo -e "检测到有${type}的定时任务:"
     cat $list
-    echo
   fi
 }
 
@@ -45,7 +44,7 @@ del_cron() {
   local path=$2
   local detail=""
   local ids=""
-  echo -e "开始尝试自动删除失效的定时任务..."
+  echo -e "\n开始尝试自动删除失效的定时任务..."
   for cron in $(cat $list_drop); do
     local id=$(cat $list_crontab_user | grep -E "$cmd_task.* $cron" | perl -pe "s|.*ID=(.*) $cmd_task.* $cron\.*|\1|" | head -1 | awk -F " " '{print $1}')
     if [[ $ids ]]; then
@@ -76,7 +75,7 @@ del_cron() {
 add_cron() {
   local list_add=$1
   local path=$2
-  echo -e "开始尝试自动添加定时任务..."
+  echo -e "\n开始尝试自动添加定时任务..."
   local detail=""
   cd $dir_scripts
   for file in $(cat $list_add); do
@@ -86,19 +85,20 @@ add_cron() {
       cron_line=$(
         perl -ne "{
                         print if /.*([\d\*]*[\*-\/,\d]*[\d\*] ){4,5}[\d\*]*[\*-\/,\d]*[\d\*]( |,|\").*$file_name/
-                    }" $file |
+                    }" $file 2>/dev/null |
           perl -pe "{
                         s|[^\d\*]*(([\d\*]*[\*-\/,\d]*[\d\*] ){4,5}[\d\*]*[\*-\/,\d]*[\d\*])( \|,\|\").*/?$file_name.*|\1|g;
                         s|\*([\d\*])(.*)|\1\2|g;
                         s|  | |g;
-                    }" | sort -u | head -1
+                    }" 2>/dev/null | sort -u | head -1
       )
-      cron_name=$(grep "new Env" $file | awk -F "\(" '{print $2}' | awk -F "\)" '{print $1}' | sed 's:.*\('\''\|"\)\([^"'\'']*\)\('\''\|"\).*:\2:' | sed 's:"::g' | sed "s:'::g" | head -1)
-      [[ -z $cron_name ]] && cron_name="$file_name"
       [[ -z $cron_line ]] && cron_line=$(grep "cron:" $file | awk -F ":" '{print $2}' | head -1 | xargs)
       [[ -z $cron_line ]] && cron_line=$(grep "cron " $file | awk -F "cron \"" '{print $2}' | awk -F "\" " '{print $1}' | head -1 | xargs)
       [[ -z $cron_line ]] && cron_line="$default_cron"
-      result=$(add_cron_api "$cron_line:$cmd_task $file:$cron_name:$SUB_ID")
+      cron_name=$(grep "new Env" $file | awk -F "\(" '{print $2}' | awk -F "\)" '{print $1}' | sed 's:.*\('\''\|"\)\([^"'\'']*\)\('\''\|"\).*:\2:' | sed 's:"::g' | sed "s:'::g" | head -1)
+      [[ -z $cron_name ]] && cron_name=$(grep "name:" $file | awk -F ":" '{print $2}' | head -1 | xargs)
+      [[ -z $cron_name ]] && cron_name=$(basename "$file_name")
+      result=$(add_cron_api "${cron_line}:${cmd_task} ${file}:${cron_name}:${SUB_ID}")
       echo -e "$result"
       if [[ $detail ]]; then
         detail="${detail}${result}\n"
@@ -135,7 +135,7 @@ update_repo() {
   git_clone_scripts "${formatUrl}" ${repo_path} "${branch}" "${proxy}"
 
   if [[ $exit_status -eq 0 ]]; then
-    echo -e "\n拉取 ${uniq_path} 成功...\n"
+    echo -e "拉取 ${uniq_path} 成功...\n"
     diff_scripts "$repo_path" "$author" "$path" "$blackword" "$dependence" "$extensions" "$autoAddCron" "$autoDelCron"
   else
     echo -e "\n拉取 ${uniq_path} 失败，请检查日志...\n"
@@ -196,7 +196,7 @@ update_raw() {
       [[ -z $cron_line ]] && cron_line=$(grep "cron:" $raw_file_name | awk -F ":" '{print $2}' | head -1 | xargs)
       [[ -z $cron_line ]] && cron_line=$(grep "cron " $raw_file_name | awk -F "cron \"" '{print $2}' | awk -F "\" " '{print $1}' | head -1 | xargs)
       [[ -z $cron_line ]] && cron_line="$default_cron"
-      result=$(add_cron_api "$cron_line:$cmd_task $filename:$cron_name:$SUB_ID")
+      result=$(add_cron_api "${cron_line}:${cmd_task} ${filename}:${cron_name}:${SUB_ID}")
       echo -e "$result\n"
       notify "新增任务通知" "\n$result"
       # update_cron_api "$cron_line:$cmd_task $filename:$cron_name:$cron_id"
@@ -232,22 +232,25 @@ usage() {
 }
 
 reload_qinglong() {
+  delete_pm2
+
   local reload_target="${1}"
   local primary_branch="master"
-  if [[ "${QL_BRANCH}" == "develop" ]]; then
-    primary_branch="develop"
+  if [[ "${QL_BRANCH}" == "develop" ]] || [[ "${QL_BRANCH}" == "debian" ]] || [[ "${QL_BRANCH}" == "debian-dev" ]]; then
+    primary_branch="${QL_BRANCH}"
   fi
 
   if [[ "$reload_target" == 'system' ]]; then
-    cp -rf ${dir_tmp}/qinglong-${primary_branch}/* ${dir_root}/
+    rm -rf ${dir_root}/back ${dir_root}/cli ${dir_root}/docker ${dir_root}/sample ${dir_root}/shell ${dir_root}/src
+    mv -f ${dir_tmp}/qinglong-${primary_branch}/* ${dir_root}/
     rm -rf $dir_static/*
-    cp -rf ${dir_tmp}/qinglong-static-${primary_branch}/* ${dir_static}/
+    mv -f ${dir_tmp}/qinglong-static-${primary_branch}/* ${dir_static}/
     cp -f $file_config_sample $dir_config/config.sample.sh
   fi
 
   if [[ "$reload_target" == 'data' ]]; then
-    rm -rf ${dir_root}/data
-    cp -rf ${dir_tmp}/data ${dir_root}/
+    rm -rf ${dir_root}/data/*
+    mv -f ${dir_tmp}/data/* ${dir_root}/data/
   fi
 
   reload_pm2
@@ -259,7 +262,7 @@ update_qinglong() {
   local mirror="gitee"
   local downloadQLUrl="https://gitee.com/whyour/qinglong/repository/archive"
   local downloadStaticUrl="https://gitee.com/whyour/qinglong-static/repository/archive"
-  local githubStatus=$(curl -s -m 2 -IL "https://google.com" | grep 200)
+  local githubStatus=$(curl -s --noproxy "*" -m 2 -IL "https://google.com" | grep 200)
   if [[ ! -z $githubStatus ]]; then
     mirror="github"
     downloadQLUrl="https://github.com/1kkll/qinglong/archive/refs/heads"
@@ -311,9 +314,12 @@ check_update_dep() {
     echo -e "更新包下载成功..."
 
     if [[ "$needRestart" == 'true' ]]; then
-      cp -rf ${dir_tmp}/qinglong-${primary_branch}/* ${dir_root}/
+      delete_pm2
+
+      rm -rf ${dir_root}/back ${dir_root}/cli ${dir_root}/docker ${dir_root}/sample ${dir_root}/shell ${dir_root}/src
+      mv -f ${dir_tmp}/qinglong-${primary_branch}/* ${dir_root}/
       rm -rf $dir_static/*
-      cp -rf ${dir_tmp}/qinglong-static-${primary_branch}/* ${dir_static}/
+      mv -f ${dir_tmp}/qinglong-static-${primary_branch}/* ${dir_static}/
       cp -f $file_config_sample $dir_config/config.sample.sh
 
       reload_pm2
@@ -418,9 +424,15 @@ gen_list_repo() {
   fi
 
   for file in ${files}; do
+    dirPath=$(dirname "$file")
     filename=$(basename "$file")
-    cp -f $file "$dir_scripts/${uniq_path}/${filename}"
-    echo "${uniq_path}/${filename}" >>"$dir_list_tmp/${uniq_path}_scripts.list"
+    filePath="${uniq_path}/${filename}"
+    if [[ $dirPath ]] && [[ $dirPath != '.' ]]; then
+      mkdir -p "${dir_scripts}/${uniq_path}/${dirPath}"
+      filePath="${uniq_path}/${dirPath}/${filename}"
+    fi
+    cp -f $file "${dir_scripts}/$filePath"
+    echo "$filePath" >>"$dir_list_tmp/${uniq_path}_scripts.list"
     # cron_id=$(cat $list_crontab_user | grep -E "$cmd_task.* ${uniq_path}_${filename}" | perl -pe "s|.*ID=(.*) $cmd_task.* ${uniq_path}_${filename}\.*|\1|" | head -1 | awk -F " " '{print $1}')
     # if [[ $cron_id ]]; then
     #   result=$(update_cron_command_api "$cmd_task ${uniq_path}/${filename}:$cron_id")
